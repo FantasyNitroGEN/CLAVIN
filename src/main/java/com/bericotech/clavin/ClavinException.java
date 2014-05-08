@@ -1,9 +1,3 @@
-package com.bericotech.clavin;
-
-import static org.junit.Assert.assertEquals;
-
-import org.junit.Test;
-
 /*#####################################################################
  *
  * CLAVIN (Cartographic Location And Vicinity INdexer)
@@ -28,24 +22,44 @@ import org.junit.Test;
  *
  * ====================================================================
  *
- * GeoParserFactoryTest.java
+ * ClavinException.java
  *
  *###################################################################*/
 
+package com.bericotech.clavin;
+
 /**
- * Checks output of  {@link GeoParserFactory}.
- *
+ * A wrapper exception for errors occurring when resolving locations with CLAVIN.
  */
-public class GeoParserFactoryTest {
+public class ClavinException extends Exception {
+    /**
+     * Create a new ClavinException.
+     */
+    public ClavinException() {
+    }
 
     /**
-     * Ensures GeoParserFactory is correctly instantiating the
-     * {@link GeoParser} class.
+     * Create a new ClavinException with the given message.
+     * @param message the message
      */
-    @Test
-    public void testGetDefault() throws ClavinException {
-        assertEquals("factory index", GeoParser.class, GeoParserFactory.getDefault("./IndexDirectory").getClass());
-        assertEquals("factory fuzzy", GeoParser.class, GeoParserFactory.getDefault("./IndexDirectory", true).getClass());
-        assertEquals("factory parameters", GeoParser.class, GeoParserFactory.getDefault("./IndexDirectory", 1, 1).getClass());
+    public ClavinException(final String message) {
+        super(message);
+    }
+
+    /**
+     * Create a new ClavinException with the given message and cause.
+     * @param message the message
+     * @param cause  the cause
+     */
+    public ClavinException(final String message, final Throwable cause) {
+        super(message, cause);
+    }
+
+    /**
+     * Create a new ClavinException with the given cause.
+     * @param cause the cause
+     */
+    public ClavinException(Throwable cause) {
+        super(cause);
     }
 }

@@ -1,6 +1,6 @@
 target/**
-indexDirectory/**
-IndexDirectory/
+indexDirectory*/**
+IndexDirectory*/
 .settings/
 .classpath
 .project
@@ -15,3 +15,4 @@ src/test/resources/evaluation
 Evaluator.java
 StanfordExtractor.java
 /dependency-reduced-pom.xml
+hierarchy.txt
