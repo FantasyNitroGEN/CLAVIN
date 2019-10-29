@@ -126,7 +126,7 @@ public class IndexDirectoryBuilder {
         Date stop = new Date();
 
         logger.info("[DONE]");
-        logger.info("{} geonames added to index. ({} records)", indexWriter.getDocStats(), count);
+        logger.info("{} geonames added to index. ({} records)", indexWriter.maxDoc(), count);
         logger.info("Merging indices... please wait.");
 
         indexWriter.close();

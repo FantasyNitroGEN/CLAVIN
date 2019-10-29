@@ -135,7 +135,7 @@ public class AncestryIndexDirectoryBuilder {
         Date stop = new Date();
 
         LOG.info("[DONE]");
-        LOG.info(indexWriter.getDocStats() + " geonames added to index.");
+        LOG.info(indexWriter.maxDoc() + " geonames added to index.");
         LOG.info("Merging indices... please wait.");
 
         LOG.info("Unresolved GeoNames (Pre-resolution)");

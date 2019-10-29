@@ -43,7 +43,7 @@ public class WhitespaceLowerCaseAnalyzer extends Analyzer {
     // Lucene v4.0 offers a nice speed increase over v3.6.1 in
     // terms of fuzzy search
     //private final static Version matchVersion = Version.LUCENE_6_6_0;
-    private final static Version matchVersion = Version.LUCENE_8_0_0;
+    private final static Version matchVersion = Version.LUCENE_6_6_1;
     
     /**
      * Simple default constructor for
