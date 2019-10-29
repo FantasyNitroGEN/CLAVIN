@@ -39,17 +39,22 @@ import com.bericotech.clavin.resolver.LuceneLocationResolver;
 import com.bericotech.clavin.resolver.ResolvedLocation;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.queryparser.analyzing.AnalyzingQueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser;
+//import org.apache.lucene.queryparser.analyzing.AnalyzingQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.NumericRangeQuery;
+//import org.apache.lucene.search.LegacyNumericRangeQuery; removed after 6.6.6 lucene
+//import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
@@ -81,7 +86,7 @@ public class LuceneGazetteer implements Gazetteer {
      * matched index document.
      */
     private static final Sort POPULATION_SORT = new Sort(new SortField[]
-            {SortField.FIELD_SCORE, new SortField(POPULATION.key(), SortField.Type.LONG, true)});
+            {SortField.FIELD_SCORE, new SortField(POPULATION.key(), SortField.Type.SCORE, true)});
 
     /**
      * The default number of results to return.
@@ -103,7 +108,7 @@ public class LuceneGazetteer implements Gazetteer {
     public LuceneGazetteer(final File indexDir) throws ClavinException {
         try {
         // load the Lucene index directory from disk
-        index = FSDirectory.open(indexDir);
+        index = FSDirectory.open(indexDir.toPath());
 
         indexSearcher = new IndexSearcher(DirectoryReader.open(index));
 
@@ -113,8 +118,10 @@ public class LuceneGazetteer implements Gazetteer {
         // run an initial throw-away query just to "prime the pump" for
         // the cache, so we can accurately measure performance speed
         // per: http://wiki.apache.org/lucene-java/ImproveSearchingSpeed
-        indexSearcher.search(new AnalyzingQueryParser(Version.LUCENE_47, INDEX_NAME.key(),
-                INDEX_ANALYZER).parse("Reston"), null, DEFAULT_MAX_RESULTS, POPULATION_SORT);
+        //indexSearcher.search(new AnalyzingQueryParser(INDEX_NAME.key(),
+                //INDEX_ANALYZER).parse("Reston"), DEFAULT_MAX_RESULTS, POPULATION_SORT);
+        indexSearcher.search(new QueryParser(INDEX_NAME.key(),
+                INDEX_ANALYZER).parse("Reston"), DEFAULT_MAX_RESULTS, POPULATION_SORT);
         } catch (ParseException pe) {
             throw new ClavinException("Error executing priming query.", pe);
         } catch (IOException ioe) {
@@ -178,13 +185,15 @@ public class LuceneGazetteer implements Gazetteer {
         try {
             // Lucene query used to look for matches based on the
             // "indexName" field
-            Query q = buildHistoricalQuery(new AnalyzingQueryParser(Version.LUCENE_47, INDEX_NAME.key(),
+           /* Query q = buildHistoricalQuery(new AnalyzingQueryParser(INDEX_NAME.key(),
+                    INDEX_ANALYZER).parse("\"" + sanitizedLocationName + "\""), includeHistorical);*/
+            Query q = buildHistoricalQuery(new QueryParser(INDEX_NAME.key(),
                     INDEX_ANALYZER).parse("\"" + sanitizedLocationName + "\""), includeHistorical);
 
             // collect all the hits up to maxResults, and sort them based
             // on Lucene match score and population for the associated
             // GeoNames record
-            TopDocs results = indexSearcher.search(q, null, maxResults, POPULATION_SORT);
+            TopDocs results = indexSearcher.search(q, maxResults, POPULATION_SORT);
 
             // initialize the return object
             List<ResolvedLocation> candidateMatches = new ArrayList<ResolvedLocation>();
@@ -205,13 +214,15 @@ public class LuceneGazetteer implements Gazetteer {
                 // with TopTermsBoostOnlyBooleanQueryRewrite, I like the output better this way.
                 // With the other method, we failed to match things like "Stra��enhaus Airport"
                 // as <Stra��enhaus>, and the match scores didn't make as much sense.
-                q = buildHistoricalQuery(new AnalyzingQueryParser(Version.LUCENE_47, INDEX_NAME.key(), INDEX_ANALYZER).
+                /*q = buildHistoricalQuery(new AnalyzingQueryParser(INDEX_NAME.key(), INDEX_ANALYZER).
+                        parse(sanitizedLocationName + "~"), includeHistorical);*/
+                q = buildHistoricalQuery(new QueryParser(INDEX_NAME.key(), INDEX_ANALYZER).
                         parse(sanitizedLocationName + "~"), includeHistorical);
 
                 // collect all the fuzzy matches up to maxHits, and sort
                 // them based on Lucene match score and population for the
                 // associated GeoNames record
-                results = indexSearcher.search(q, null, maxResults, POPULATION_SORT);
+                results = indexSearcher.search(q, maxResults, POPULATION_SORT);
 
                 // see if anything was found with fuzzy matching
                 if (results.scoreDocs.length > 0) {
@@ -250,11 +261,19 @@ public class LuceneGazetteer implements Gazetteer {
         Query historicalQuery = query;
         // if historical data is included, we don't need to restrict the query at all
         if (!includeHistorical) {
-            BooleanQuery bq = new BooleanQuery();
-            int notHistorical = IndexField.getBooleanIndexValue(false);
-            bq.add(NumericRangeQuery.newIntRange(HISTORICAL.key(), notHistorical, notHistorical, true, true),
+            int notHistorical = getBooleanIndexValue(false);
+            /*BooleanQuery bq = new BooleanQuery.Builder()
+                    .add(LegacyNumericRangeQuery.newIntRange(HISTORICAL.key(),notHistorical, notHistorical, true, true), BooleanClause.Occur.MUST)
+                    .add(query, BooleanClause.Occur.MUST)
+                    .build();*/
+            BooleanQuery bq = new BooleanQuery.Builder()
+                    .add(IntPoint.newRangeQuery(HISTORICAL.key(),notHistorical, notHistorical), BooleanClause.Occur.MUST)
+                    .add(query, BooleanClause.Occur.MUST)
+                    .build();
+
+            /*bq.add(NumericRangeQuery.newIntRange(HISTORICAL.key(), notHistorical, notHistorical, true, true),
                     BooleanClause.Occur.MUST);
-            bq.add(query, BooleanClause.Occur.MUST);
+            bq.add(query, BooleanClause.Occur.MUST);*/
             historicalQuery = bq;
         }
         return historicalQuery;
@@ -271,7 +290,8 @@ public class LuceneGazetteer implements Gazetteer {
         try {
             GeoName geoName = null;
             // Lucene query used to look for exact match on the "geonameID" field
-            Query q = NumericRangeQuery.newIntRange(GEONAME_ID.key(), geonameId, geonameId, true, true);
+            //Query q = LegacyNumericRangeQuery.newIntRange(GEONAME_ID.key(), geonameId, geonameId, true, true);
+            Query q = IntPoint.newRangeQuery(GEONAME_ID.key(), geonameId, geonameId);
             // retrieve only one matching document
             TopDocs results = indexSearcher.search(q, 1);
             if (results.scoreDocs.length > 0) {

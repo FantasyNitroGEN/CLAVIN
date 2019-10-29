@@ -22,13 +22,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.IntField;
-import org.apache.lucene.document.LongField;
-import org.apache.lucene.document.StoredField;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
+//import org.apache.lucene.document.IntField;
+//import org.apache.lucene.document.LongField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.FSDirectory;
@@ -95,13 +91,13 @@ public class AncestryIndexDirectoryBuilder {
 
         // Create a new index file on disk, allowing Lucene to choose
         // the best FSDirectory implementation given the environment.
-        FSDirectory index = FSDirectory.open(idir);
+        FSDirectory index = FSDirectory.open(idir.toPath());
 
         // indexing by lower-casing & tokenizing on whitespace
         Analyzer indexAnalyzer = new WhitespaceLowerCaseAnalyzer();
 
         // create the object that will actually build the Lucene index
-        indexWriter = new IndexWriter(index, new IndexWriterConfig(Version.LUCENE_47, indexAnalyzer));
+        indexWriter = new IndexWriter(index, new IndexWriterConfig(indexAnalyzer));
 
         // open the gazetteer files to be loaded
         BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(new File(pathToGazetteer)), "UTF-8"));
@@ -139,7 +135,7 @@ public class AncestryIndexDirectoryBuilder {
         Date stop = new Date();
 
         LOG.info("[DONE]");
-        LOG.info(indexWriter.maxDoc() + " geonames added to index.");
+        LOG.info(indexWriter.getDocStats() + " geonames added to index.");
         LOG.info("Merging indices... please wait.");
 
         LOG.info("Unresolved GeoNames (Pre-resolution)");
@@ -352,9 +348,11 @@ public class AncestryIndexDirectoryBuilder {
             Document doc = new Document();
             doc.add(new TextField(INDEX_NAME.key(), name, Field.Store.YES));
             doc.add(new StoredField(GEONAME.key(), gazetteerRecord));
-            doc.add(new IntField(GEONAME_ID.key(), geoNameID, Field.Store.YES));
-            doc.add(new LongField(POPULATION.key(), population, Field.Store.YES));
-            doc.add(new IntField(HISTORICAL.key(), historical, Field.Store.NO));
+            doc.add(new IntPoint(GEONAME_ID.key(), geoNameID));
+            doc.add(new StoredField(GEONAME_ID.key(),geoNameID));
+            doc.add(new SortedNumericDocValuesField(POPULATION.key(), population));
+            doc.add(new StoredField(POPULATION.key(), population));
+            doc.add(new IntPoint(HISTORICAL.key(), historical));
             doc.add(new StringField(FEATURE_CODE.key(), code.name(), Field.Store.NO));
             indexWriter.addDocument(doc);
         }

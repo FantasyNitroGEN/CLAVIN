@@ -13,16 +13,11 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.IntField;
-import org.apache.lucene.document.LongField;
-import org.apache.lucene.document.StoredField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
+import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.util.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +59,12 @@ import org.slf4j.LoggerFactory;
 public class IndexDirectoryBuilder {
 
     public final static Logger logger = LoggerFactory.getLogger(IndexDirectoryBuilder.class);
+/*    private static final FieldType LONG_FIELD_TYPE_STORED_SORTED = new FieldType(StringField.TYPE_STORED);
+
+    static {
+        LONG_FIELD_TYPE_STORED_SORTED.setDocValuesType(DocValuesType.NUMERIC);
+        LONG_FIELD_TYPE_STORED_SORTED.freeze();
+    }*/
 
     // the GeoNames gazetteer file to be loaded
     static String pathToGazetteer = "./allCountries.txt";
@@ -88,13 +89,13 @@ public class IndexDirectoryBuilder {
 
         // Create a new index file on disk, allowing Lucene to choose
         // the best FSDirectory implementation given the environment.
-        FSDirectory index = FSDirectory.open(idir);
+        FSDirectory index = FSDirectory.open(idir.toPath());
 
         // indexing by lower-casing & tokenizing on whitespace
         Analyzer indexAnalyzer = new WhitespaceLowerCaseAnalyzer();
 
         // create the object that will actually build the Lucene index
-        IndexWriter indexWriter = new IndexWriter(index, new IndexWriterConfig(Version.LUCENE_47, indexAnalyzer));
+        IndexWriter indexWriter = new IndexWriter(index, new IndexWriterConfig(indexAnalyzer));
 
         // open the gazetteer files to be loaded
         BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(new File(pathToGazetteer)), "UTF-8"));
@@ -125,7 +126,7 @@ public class IndexDirectoryBuilder {
         Date stop = new Date();
 
         logger.info("[DONE]");
-        logger.info("{} geonames added to index. ({} records)", indexWriter.maxDoc(), count);
+        logger.info("{} geonames added to index. ({} records)", indexWriter.getDocStats(), count);
         logger.info("Merging indices... please wait.");
 
         indexWriter.close();
@@ -196,10 +197,12 @@ public class IndexDirectoryBuilder {
 
         // TODO: use geonameID to link administrative subdivisions to
         //       each other
-        doc.add(new IntField(GEONAME_ID.key(), geonameID, Field.Store.YES));
+        doc.add(new IntPoint(GEONAME_ID.key(), geonameID));
+        doc.add(new StoredField(GEONAME_ID.key(), geonameID));
 
         // we'll initially sort match results based on population
-        doc.add(new LongField(POPULATION.key(), population, Field.Store.YES));
+        doc.add(new SortedNumericDocValuesField(POPULATION.key(), population));
+        doc.add(new StoredField(POPULATION.key(), population));
 
         logger.debug("Adding to index: " + name);
 

@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * geographic entities (as intended by the document's author based on
  * context) by finding the best match in a gazetteer.
  *
- * @deprecated 2.0.0 Use {@link Clavin}
+ * @deprecated 2.0.0 Use {@link ClavinLocationResolver}
  */
 @Deprecated
 public class LuceneLocationResolver implements LocationResolver {

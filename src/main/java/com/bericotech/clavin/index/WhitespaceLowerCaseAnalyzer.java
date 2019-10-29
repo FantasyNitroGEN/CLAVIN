@@ -42,7 +42,8 @@ public class WhitespaceLowerCaseAnalyzer extends Analyzer {
     
     // Lucene v4.0 offers a nice speed increase over v3.6.1 in
     // terms of fuzzy search
-    private final static Version matchVersion = Version.LUCENE_47;
+    //private final static Version matchVersion = Version.LUCENE_6_6_0;
+    private final static Version matchVersion = Version.LUCENE_8_0_0;
     
     /**
      * Simple default constructor for
@@ -50,15 +51,15 @@ public class WhitespaceLowerCaseAnalyzer extends Analyzer {
      * 
      */
     public WhitespaceLowerCaseAnalyzer() {}
-    
+
+
     /**
      * Provides tokenizer access for the analyzer.
-     * 
+     *
      * @param fieldName     field to be tokenized
-     * @param reader
      */
     @Override
-    protected TokenStreamComponents createComponents(final String fieldName, final Reader reader) {
-        return new TokenStreamComponents(new WhitespaceLowerCaseTokenizer(matchVersion, reader));
+    protected TokenStreamComponents createComponents(String fieldName) {
+        return new TokenStreamComponents(new WhitespaceLowerCaseTokenizer());
     }
 }

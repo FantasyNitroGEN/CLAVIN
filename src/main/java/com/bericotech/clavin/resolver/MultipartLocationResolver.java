@@ -7,7 +7,8 @@ import com.bericotech.clavin.index.BinarySimilarity;
 import com.bericotech.clavin.index.WhitespaceLowerCaseAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.queryparser.analyzing.AnalyzingQueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser;
+//import org.apache.lucene.queryparser.analyzing.AnalyzingQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
@@ -49,7 +50,7 @@ public class MultipartLocationResolver {
 
     public MultipartLocationResolver(File indexDir) throws IOException, ParseException {
         // load the Lucene index directory from disk
-        FSDirectory index = FSDirectory.open(indexDir);
+        FSDirectory index = FSDirectory.open(indexDir.toPath());
 
         // index employs simple lower-casing & tokenizing on whitespace
         indexAnalyzer = new WhitespaceLowerCaseAnalyzer();
@@ -61,8 +62,9 @@ public class MultipartLocationResolver {
         // run an initial throw-away query just to "prime the pump" for
         // the cache, so we can accurately measure performance speed
         // per: http://wiki.apache.org/lucene-java/ImproveSearchingSpeed
-        indexSearcher.search(new AnalyzingQueryParser(Version.LUCENE_47,
-                "indexName", indexAnalyzer).parse("Reston"), null, maxHitDepth, populationSort);
+        //indexSearcher.search(new AnalyzingQueryParser("indexNane", indexAnalyzer).parse("Reston"),maxHitDepth,populationSort); //6.0 version
+        indexSearcher.search(new QueryParser("indexNane", indexAnalyzer).parse("Reston"),maxHitDepth,populationSort);
+        //indexSearcher.search(new AnalyzingQueryParser("indexName", indexAnalyzer).parse("Reston"), null, maxHitDepth, populationSort);
     }
 
     private List<ResolvedLocation> partResolver(String locationName, String codePrefix, boolean fuzzy)
@@ -77,13 +79,13 @@ public class MultipartLocationResolver {
         try {
             // Lucene query used to look for matches based on the
             // "indexName" field
-            Query q = new AnalyzingQueryParser(Version.LUCENE_47,
-                    "indexName", indexAnalyzer).parse("\"" + sanitizedLocationName + "\"");
+            //Query q = new AnalyzingQueryParser("indexName", indexAnalyzer).parse("\"" + sanitizedLocationName + "\"");
+            Query q = new QueryParser("indexName", indexAnalyzer).parse("\"" + sanitizedLocationName + "\"");
 
             // collect all the hits up to maxHits, and sort them based
             // on Lucene match score and population for the associated
             // GeoNames record
-            TopDocs results = indexSearcher.search(q, null, maxHitDepth, populationSort);
+            TopDocs results = indexSearcher.search(q, maxHitDepth, populationSort);
 
             // initialize the return object
             List<ResolvedLocation> candidateMatches = new ArrayList<ResolvedLocation>();
@@ -104,9 +106,10 @@ public class MultipartLocationResolver {
 
             if (fuzzy && (candidateMatches.size() == 0)) { // only if fuzzy matching is turned on
                 // no exact String matches found -- fallback to fuzzy search
-                q = new AnalyzingQueryParser(Version.LUCENE_47, "indexName", indexAnalyzer).parse(sanitizedLocationName
+                //q = new AnalyzingQueryParser( "indexName", indexAnalyzer).parse(sanitizedLocationName + "~");
+                q = new QueryParser( "indexName", indexAnalyzer).parse(sanitizedLocationName
                         + "~");
-                results = indexSearcher.search(q, null, maxHitDepth, populationSort);
+                results = indexSearcher.search(q, maxHitDepth, populationSort);
 
                 // see if anything was found with fuzzy matching
                 if (results.scoreDocs.length > 0) {
